@@ -30,7 +30,10 @@ def _r_squared(y: np.ndarray, yhat: np.ndarray) -> float:
 
 
 def _ols_gls_common(
-    S: np.ndarray, TE_ms: np.ndarray, X: np.ndarray, weights: np.ndarray | None = None
+    S: np.ndarray,
+    TE_ms: np.ndarray,
+    X: np.ndarray,
+    weights: np.ndarray | None = None,
 ) -> Tuple[float, float]:
     mask = S > 0
     if mask.sum() < 2:

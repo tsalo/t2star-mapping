@@ -8,12 +8,18 @@ from .pipeline import PipelineOptions, T2StarPipeline
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="T2* mapping with through-slice dropout correction"
+        description="T2* mapping with through-slice dropout correction",
     )
     p.add_argument(
-        "--magn", required=True, help="Path to multi-echo magnitude 4D NIfTI"
+        "--magn",
+        required=True,
+        help="Path to multi-echo magnitude 4D NIfTI",
     )
-    p.add_argument("--phase", required=True, help="Path to multi-echo phase 4D NIfTI")
+    p.add_argument(
+        "--phase",
+        required=True,
+        help="Path to multi-echo phase 4D NIfTI",
+    )
     p.add_argument(
         "--te",
         required=True,
@@ -21,8 +27,16 @@ def main() -> None:
         type=float,
         help="Echo times in ms (space-separated)",
     )
-    p.add_argument("--out", required=True, help="Output directory")
-    p.add_argument("--prefix", default="", help="Output filename prefix")
+    p.add_argument(
+        "--out",
+        required=True,
+        help="Output directory",
+    )
+    p.add_argument(
+        "--prefix",
+        default="",
+        help="Output filename prefix",
+    )
     p.add_argument(
         "--method",
         default="nlls",
@@ -36,7 +50,10 @@ def main() -> None:
         help="RMSE threshold for frequency fit mask",
     )
     p.add_argument(
-        "--poly-order", default=3, type=int, help="3D polynomial order for smoothing"
+        "--poly-order",
+        default=3,
+        type=int,
+        help="3D polynomial order for smoothing",
     )
     p.add_argument(
         "--downsample",
@@ -45,8 +62,18 @@ def main() -> None:
         nargs=3,
         help="Downsample factors x y z",
     )
-    p.add_argument("--dz-mm", default=1.25, type=float, help="Slice thickness in mm")
-    p.add_argument("--t2max", default=1000.0, type=float, help="Max T2* to clamp (ms)")
+    p.add_argument(
+        "--dz-mm",
+        default=1.25,
+        type=float,
+        help="Slice thickness in mm",
+    )
+    p.add_argument(
+        "--t2max",
+        default=1000.0,
+        type=float,
+        help="Max T2* to clamp (ms)",
+    )
     args = p.parse_args()
 
     os.makedirs(args.out, exist_ok=True)

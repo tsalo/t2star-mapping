@@ -29,7 +29,10 @@ def _build_model_terms(order: int) -> np.ndarray:
 
 
 def _design_matrix(
-    x: np.ndarray, y: np.ndarray, z: np.ndarray, terms: np.ndarray
+    x: np.ndarray,
+    y: np.ndarray,
+    z: np.ndarray,
+    terms: np.ndarray,
 ) -> np.ndarray:
     n = x.size
     nt = terms.shape[0]
@@ -40,7 +43,9 @@ def _design_matrix(
 
 
 def smooth_and_gradZ_polyfit3d(
-    freq_3d: np.ndarray, mask_3d: np.ndarray, opts: SmoothOptions
+    freq_3d: np.ndarray,
+    mask_3d: np.ndarray,
+    opts: SmoothOptions,
 ) -> tuple[np.ndarray, np.ndarray]:
     # Downsample using nearest neighbor indexing
     dx, dy, dz = opts.downsample
@@ -69,7 +74,10 @@ def smooth_and_gradZ_polyfit3d(
 
     # Derivative along z at downsampled grid
     def design_matrix_dz(
-        xv: np.ndarray, yv: np.ndarray, zv: np.ndarray, t: np.ndarray
+        xv: np.ndarray,
+        yv: np.ndarray,
+        zv: np.ndarray,
+        t: np.ndarray,
     ) -> np.ndarray:
         nt = t.shape[0]
         Mdz = np.zeros((xv.size, nt), dtype=float)

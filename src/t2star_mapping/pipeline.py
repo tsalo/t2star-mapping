@@ -49,7 +49,8 @@ class T2StarPipeline:
             freq_map,
             mask,
             SmoothOptions(
-                downsample=self.opts.downsample, poly_order=self.opts.smooth_poly_order
+                downsample=self.opts.downsample,
+                poly_order=self.opts.smooth_poly_order,
             ),
         )
         freq_smooth_path = f"{out_dir}/{self.opts.prefix}freq_smooth.nii.gz"
@@ -74,20 +75,28 @@ class T2StarPipeline:
                 res_unc: FitResult = fit_t2star(S, te, method=self.opts.fitting_method)
                 r2_unc.flat[idx + z * nx * ny] = res_unc.r_squared
                 t2_unc.flat[idx + z * nx * ny] = np.clip(
-                    res_unc.T2star_ms, 0, self.opts.threshold_t2star_max_ms
+                    res_unc.T2star_ms,
+                    0,
+                    self.opts.threshold_t2star_max_ms,
                 )
 
-                # correction using sinc(|gradZ|*TE/2000), echo times in ms, gradZ in Hz/pixel ~ Hz/mm? Follow MATLAB: /2000
+                # correction using sinc(|gradZ|*TE/2000),
+                # echo times in ms, gradZ in Hz/pixel ~ Hz/mm?
+                # Follow MATLAB: /2000
                 corr = np.sinc(gradZ_flat[idx, z] * te / 2000.0)
                 corr = np.abs(corr)
                 corr[corr == 0] = 1.0
                 S_corr = S / corr
                 res_cor: FitResult = fit_t2star(
-                    S_corr, te, method=self.opts.fitting_method
+                    S_corr,
+                    te,
+                    method=self.opts.fitting_method,
                 )
                 r2_cor.flat[idx + z * nx * ny] = res_cor.r_squared
                 t2_cor.flat[idx + z * nx * ny] = np.clip(
-                    abs(res_cor.T2star_ms), 0, self.opts.threshold_t2star_max_ms
+                    abs(res_cor.T2star_ms),
+                    0,
+                    self.opts.threshold_t2star_max_ms,
                 )
                 iters.flat[idx + z * nx * ny] = res_cor.iterations
 

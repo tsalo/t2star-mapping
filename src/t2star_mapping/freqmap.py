@@ -6,7 +6,9 @@ from numpy.typing import ArrayLike
 
 
 def compute_mask_from_magnitude(
-    magn_4d: np.ndarray, thresh: float = 500.0, sigma: float = 5.0
+    magn_4d: np.ndarray,
+    thresh: float = 500.0,
+    sigma: float = 5.0,
 ) -> np.ndarray:
     first_echo = magn_4d[..., 0]
     smoothed = gaussian_filter(first_echo, sigma=sigma)
