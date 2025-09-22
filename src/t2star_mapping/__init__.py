@@ -1,7 +1,7 @@
 __all__ = [
-	"io",
-	"fitting",
-	"freqmap",
-	"smooth",
-	"pipeline",
+    "io",
+    "fitting",
+    "freqmap",
+    "smooth",
+    "pipeline",
 ]
