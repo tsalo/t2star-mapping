@@ -13,6 +13,30 @@ from .fitting import fit_t2star, FitResult
 
 @dataclass
 class PipelineOptions:
+    """Configuration for the T2* pipeline.
+
+    Parameters
+    ----------
+    prefix : str, optional
+        Prefix for output filenames.
+    fitting_method : {"ols", "gls", "nlls", "num"}, optional
+        T2* fitting method. Default is "nlls".
+    echo_times_ms : list[float] or numpy.ndarray
+        Echo times in milliseconds.
+    rmse_thresh : float, optional
+        RMSE threshold for frequency fit masking. Default 0.8.
+    mask_thresh : float, optional
+        Unused placeholder for future magnitude-based thresholding. Default 500.0.
+    smooth_poly_order : int, optional
+        3D polynomial order for smoothing. Default 3.
+    downsample : tuple[int, int, int], optional
+        Downsampling factors for smoothing. Default (2, 2, 2).
+    dz_mm : float, optional
+        Slice thickness in mm (for interpretation; not explicitly used). Default 1.25.
+    threshold_t2star_max_ms : float, optional
+        Upper clamp on T2* outputs (ms). Default 1000.
+    """
+
     prefix: str = ""
     fitting_method: Literal["ols", "gls", "nlls", "num"] = "nlls"
     echo_times_ms: list[float] | np.ndarray = None
@@ -25,6 +49,21 @@ class PipelineOptions:
 
 
 class T2StarPipeline:
+    """High-level pipeline for T2* mapping and correction.
+
+    The pipeline computes a frequency map from phase, smooths it and derives
+    gradZ, then performs T2* fitting with and without correction.
+
+    Parameters
+    ----------
+    magn_path : str
+        Path to 4D multi-echo magnitude NIfTI.
+    phase_path : str
+        Path to 4D multi-echo phase NIfTI (radians).
+    opts : PipelineOptions
+        Pipeline configuration.
+    """
+
     def __init__(self, magn_path: str, phase_path: str, opts: PipelineOptions):
         self.magn_data, self.magn_img = load_nifti(magn_path)
         self.phase_data, self.phase_img = load_nifti(phase_path)
@@ -33,11 +72,26 @@ class T2StarPipeline:
             raise ValueError("echo_times_ms must be provided")
 
     def run(self, out_dir: str) -> dict[str, str]:
+        """Run the pipeline end-to-end and save outputs.
+
+        Parameters
+        ----------
+        out_dir : str
+            Output directory for generated NIfTI files.
+
+        Returns
+        -------
+        dict[str, str]
+            Mapping from logical output names to file paths.
+        """
         nx, ny, nz, nt = self.magn_data.shape
         te = np.asarray(self.opts.echo_times_ms, dtype=float)[:nt]
 
         freq_map, mask = compute_frequency_map(
-            self.magn_data, self.phase_data, te, rmse_thresh=self.opts.rmse_thresh
+            self.magn_data,
+            self.phase_data,
+            te,
+            rmse_thresh=self.opts.rmse_thresh,
         )
         freq_img_path = f"{out_dir}/{self.opts.prefix}freq.nii.gz"
         save_nifti_like(self.magn_img, freq_map.astype(np.float32), freq_img_path)

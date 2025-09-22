@@ -1,3 +1,9 @@
+"""Command-line interface for the T2* mapping pipeline.
+
+Provides a simple entrypoint to run the full pipeline from multi-echo
+magnitude and phase NIfTI inputs and echo times.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -7,6 +13,11 @@ from .pipeline import PipelineOptions, T2StarPipeline
 
 
 def main() -> None:
+    """Run the T2* pipeline from command-line arguments.
+
+    Parses inputs, builds ``PipelineOptions``, runs the pipeline, and prints
+    output file paths.
+    """
     p = argparse.ArgumentParser(
         description="T2* mapping with through-slice dropout correction",
     )
