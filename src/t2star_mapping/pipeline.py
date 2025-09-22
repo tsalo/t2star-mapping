@@ -7,7 +7,7 @@ import numpy as np
 
 from .io import load_nifti, save_nifti_like
 from .freqmap import compute_frequency_map
-from .smooth import SmoothOptions, smooth_and_gradZ_polyfit3d
+from .smooth import smooth_and_grad_z_polyfit3d
 from .fitting import fit_t2star, FitResult
 
 
@@ -52,7 +52,7 @@ class T2StarPipeline:
     """High-level pipeline for T2* mapping and correction.
 
     The pipeline computes a frequency map from phase, smooths it and derives
-    gradZ, then performs T2* fitting with and without correction.
+    grad_z, then performs T2* fitting with and without correction.
 
     Parameters
     ----------
@@ -99,18 +99,16 @@ class T2StarPipeline:
         mask_img_path = f"{out_dir}/{self.opts.prefix}mask.nii.gz"
         save_nifti_like(self.magn_img, mask.astype(np.uint8), mask_img_path)
 
-        freq_smooth, gradZ = smooth_and_gradZ_polyfit3d(
+        freq_smooth, grad_z = smooth_and_grad_z_polyfit3d(
             freq_map,
             mask,
-            SmoothOptions(
-                downsample=self.opts.downsample,
-                poly_order=self.opts.smooth_poly_order,
-            ),
+            downsample=self.opts.downsample,
+            poly_order=self.opts.smooth_poly_order,
         )
         freq_smooth_path = f"{out_dir}/{self.opts.prefix}freq_smooth.nii.gz"
         save_nifti_like(self.magn_img, freq_smooth.astype(np.float32), freq_smooth_path)
-        gradZ_path = f"{out_dir}/{self.opts.prefix}freqGradZ.nii.gz"
-        save_nifti_like(self.magn_img, gradZ.astype(np.float32), gradZ_path)
+        grad_z_path = f"{out_dir}/{self.opts.prefix}freqGradZ.nii.gz"
+        save_nifti_like(self.magn_img, grad_z.astype(np.float32), grad_z_path)
 
         # Corrected T2*: iterate voxelwise within mask
         t2_unc = np.zeros((nx, ny, nz), dtype=np.float32)
@@ -121,7 +119,7 @@ class T2StarPipeline:
 
         magn_flat = self.magn_data.reshape(nx * ny, nz, nt)
         mask_flat = mask.reshape(nx * ny, nz)
-        gradZ_flat = gradZ.reshape(nx * ny, nz)
+        gradZ_flat = grad_z.reshape(nx * ny, nz)
         for z in range(nz):
             indices = np.flatnonzero(mask_flat[:, z])
             for idx in indices:
@@ -129,13 +127,13 @@ class T2StarPipeline:
                 res_unc: FitResult = fit_t2star(S, te, method=self.opts.fitting_method)
                 r2_unc.flat[idx + z * nx * ny] = res_unc.r_squared
                 t2_unc.flat[idx + z * nx * ny] = np.clip(
-                    res_unc.T2star_ms,
+                    res_unc.t2star_ms,
                     0,
                     self.opts.threshold_t2star_max_ms,
                 )
 
-                # correction using sinc(|gradZ|*TE/2000),
-                # echo times in ms, gradZ in Hz/pixel ~ Hz/mm?
+                # correction using sinc(|grad_z|*TE/2000),
+                # echo times in ms, grad_z in Hz/pixel ~ Hz/mm?
                 # Follow MATLAB: /2000
                 corr = np.sinc(gradZ_flat[idx, z] * te / 2000.0)
                 corr = np.abs(corr)
@@ -148,7 +146,7 @@ class T2StarPipeline:
                 )
                 r2_cor.flat[idx + z * nx * ny] = res_cor.r_squared
                 t2_cor.flat[idx + z * nx * ny] = np.clip(
-                    abs(res_cor.T2star_ms),
+                    abs(res_cor.t2star_ms),
                     0,
                     self.opts.threshold_t2star_max_ms,
                 )
@@ -172,7 +170,7 @@ class T2StarPipeline:
             freq=freq_img_path,
             mask=mask_img_path,
             freq_smooth=freq_smooth_path,
-            gradZ=gradZ_path,
+            grad_z=grad_z_path,
             t2_uncorrected=unc_path,
             t2_corrected=cor_path,
             r2_uncorrected=r2u_path,

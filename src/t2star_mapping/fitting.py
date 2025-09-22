@@ -17,11 +17,11 @@ class FitResult:
 
     Parameters
     ----------
-    T2star_ms : float
+    t2star_ms : float
         Estimated T2* time in milliseconds.
-    S0 : float
+    s0 : float
         Estimated signal at TE=0 (extrapolated).
-    Sfit : numpy.ndarray
+    s_fit : numpy.ndarray
         Modeled signal across the provided echo times.
     r_squared : float
         Coefficient of determination of the fit.
@@ -31,9 +31,9 @@ class FitResult:
         Whether the fitting procedure converged.
     """
 
-    T2star_ms: float
-    S0: float
-    Sfit: np.ndarray
+    t2star_ms: float
+    s0: float
+    s_fit: np.ndarray
     r_squared: float
     iterations: int
     converged: bool
@@ -79,10 +79,10 @@ def _ols_gls_common(
 
     Returns
     -------
-    T2star_ms : float
+    t2star_ms : float
         Estimated T2* in ms, from slope of log-linear model.
-    S0 : float
-        Estimated S0 from intercept of log-linear model.
+    s0 : float
+        Estimated s0 from intercept of log-linear model.
     """
     mask = S > 0
     if mask.sum() < 2:
@@ -96,9 +96,9 @@ def _ols_gls_common(
         W = np.diag(weights[mask])
         beta = np.linalg.pinv(Xm.T @ W @ Xm) @ (Xm.T @ W @ y)
 
-    T2s = -1.0 / beta[0]
-    S0 = float(np.exp(beta[1]))
-    return float(T2s), S0
+    t2s = -1.0 / beta[0]
+    s0 = float(np.exp(beta[1]))
+    return float(t2s), s0
 
 
 def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> FitResult:
@@ -114,13 +114,13 @@ def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> Fi
         Fitting method. Default is "nlls".
         - "ols": ordinary least squares in log-domain.
         - "gls": generalized least squares in log-domain (weights ~ 1/S).
-        - "nlls": non-linear least squares to S0*exp(-TE/T2*).
+        - "nlls": non-linear least squares to s0*exp(-TE/T2*).
         - "num": numerical approximation (Hagberg-style).
 
     Returns
     -------
     FitResult
-        Structured result with T2*, S0, fitted signal, R^2, iterations, and convergence.
+        Structured result with T2*, s0, fitted signal, R^2, iterations, and convergence.
     """
     S = np.asarray(S, dtype=float).ravel()
     TE_ms = np.asarray(TE_ms, dtype=float).ravel()
@@ -129,15 +129,15 @@ def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> Fi
     X = np.c_[TE_ms, np.ones(nt)]
 
     if method == "ols":
-        T2s, S0 = _ols_gls_common(S, X, None)
-        Sfit = (
-            S0 * np.exp(-TE_ms / T2s) if np.isfinite(T2s) else np.full_like(S, np.nan)
+        T2s, s0 = _ols_gls_common(S, X, None)
+        s_fit = (
+            s0 * np.exp(-TE_ms / T2s) if np.isfinite(T2s) else np.full_like(S, np.nan)
         )
         return FitResult(
-            T2star_ms=float(T2s),
-            S0=float(S0),
-            Sfit=Sfit,
-            r_squared=_r_squared(S, Sfit),
+            t2star_ms=float(T2s),
+            s0=float(s0),
+            s_fit=s_fit,
+            r_squared=_r_squared(S, s_fit),
             iterations=1,
             converged=np.isfinite(T2s),
         )
@@ -146,15 +146,15 @@ def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> Fi
         mask = S > 0
         weights = np.zeros_like(S)
         weights[mask] = 1.0 / S[mask]
-        T2s, S0 = _ols_gls_common(S, X, weights)
-        Sfit = (
-            S0 * np.exp(-TE_ms / T2s) if np.isfinite(T2s) else np.full_like(S, np.nan)
+        T2s, s0 = _ols_gls_common(S, X, weights)
+        s_fit = (
+            s0 * np.exp(-TE_ms / T2s) if np.isfinite(T2s) else np.full_like(S, np.nan)
         )
         return FitResult(
-            T2star_ms=float(T2s),
-            S0=float(S0),
-            Sfit=Sfit,
-            r_squared=_r_squared(S, Sfit),
+            t2star_ms=float(T2s),
+            s0=float(s0),
+            s_fit=s_fit,
+            r_squared=_r_squared(S, s_fit),
             iterations=1,
             converged=np.isfinite(T2s),
         )
@@ -162,9 +162,9 @@ def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> Fi
     if method == "num":
         if nt < 2:
             return FitResult(
-                T2star_ms=np.nan,
-                S0=np.nan,
-                Sfit=np.full_like(S, np.nan),
+                t2star_ms=np.nan,
+                s0=np.nan,
+                s_fit=np.full_like(S, np.nan),
                 r_squared=0.0,
                 iterations=1,
                 converged=False,
@@ -174,13 +174,13 @@ def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> Fi
             * (S[0] + S[-1] + 2 * np.sum(S[1:-1]))
             / (2 * (nt - 1) * (S[0] - S[-1]))
         )
-        S0 = S[0] * np.exp(TE_ms[0] / T2s)
-        Sfit = S0 * np.exp(-TE_ms / T2s)
+        s0 = S[0] * np.exp(TE_ms[0] / T2s)
+        s_fit = s0 * np.exp(-TE_ms / T2s)
         return FitResult(
-            T2star_ms=float(T2s),
-            S0=float(S0),
-            Sfit=Sfit,
-            r_squared=_r_squared(S, Sfit),
+            t2star_ms=float(T2s),
+            s0=float(s0),
+            s_fit=s_fit,
+            r_squared=_r_squared(S, s_fit),
             iterations=1,
             converged=True,
         )
@@ -192,16 +192,16 @@ def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> Fi
         T2s0, S00 = _ols_gls_common(S, X, None)
         if not np.isfinite(T2s0) or T2s0 <= 0:
             return FitResult(
-                T2star_ms=np.nan,
-                S0=np.nan,
-                Sfit=np.full_like(S, np.nan),
+                t2star_ms=np.nan,
+                s0=np.nan,
+                s_fit=np.full_like(S, np.nan),
                 r_squared=0.0,
                 iterations=1,
                 converged=False,
             )
 
     def model(p: np.ndarray, te: np.ndarray) -> np.ndarray:
-        """Exponential model S(te) = S0 * exp(-te/T2*)."""
+        """Exponential model S(te) = s0 * exp(-te/T2*)."""
         return p[0] * np.exp(-te / p[1])
 
     def resid(p: np.ndarray) -> np.ndarray:
@@ -211,14 +211,14 @@ def fit_t2star(S: ArrayLike, TE_ms: ArrayLike, method: FitMethod = "nlls") -> Fi
     p0 = np.array([S00, T2s0], dtype=float)
     bounds = (np.array([0.0, 1e-3]), np.array([np.inf, 1e5]))
     res = least_squares(resid, p0, bounds=bounds, max_nfev=200)
-    S0 = float(res.x[0])
+    s0 = float(res.x[0])
     T2s = float(res.x[1])
-    Sfit = model(res.x, TE_ms)
+    s_fit = model(res.x, TE_ms)
     return FitResult(
-        T2star_ms=T2s,
-        S0=S0,
-        Sfit=Sfit,
-        r_squared=_r_squared(S, Sfit),
+        t2star_ms=T2s,
+        s0=s0,
+        s_fit=s_fit,
+        r_squared=_r_squared(S, s_fit),
         iterations=int(res.nfev),
         converged=bool(res.success),
     )
