@@ -8,7 +8,7 @@ import numpy as np
 from .io import load_nifti, save_nifti_like
 from .freqmap import compute_frequency_map
 from .smooth import smooth_and_grad_z_polyfit3d
-from .fitting import fit_t2star, FitResult
+from .fitting import fit_t2star
 
 
 @dataclass
@@ -123,11 +123,13 @@ class T2StarPipeline:
         for z in range(nz):
             indices = np.flatnonzero(mask_flat[:, z])
             for idx in indices:
-                S = magn_flat[idx, z, :].astype(float)
-                res_unc: FitResult = fit_t2star(S, te, method=self.opts.fitting_method)
-                r2_unc.flat[idx + z * nx * ny] = res_unc.r_squared
+                s = magn_flat[idx, z, :].astype(float)
+                t2s_u, s0_u, s_fit_u, r2_u, it_u, _ = fit_t2star(
+                    s, te, method=self.opts.fitting_method
+                )
+                r2_unc.flat[idx + z * nx * ny] = r2_u
                 t2_unc.flat[idx + z * nx * ny] = np.clip(
-                    res_unc.t2star_ms,
+                    t2s_u,
                     0,
                     self.opts.threshold_t2star_max_ms,
                 )
@@ -138,19 +140,19 @@ class T2StarPipeline:
                 corr = np.sinc(gradZ_flat[idx, z] * te / 2000.0)
                 corr = np.abs(corr)
                 corr[corr == 0] = 1.0
-                S_corr = S / corr
-                res_cor: FitResult = fit_t2star(
-                    S_corr,
+                s_corr = s / corr
+                t2s_c, s0_c, s_fit_c, r2_c, it_c, _ = fit_t2star(
+                    s_corr,
                     te,
                     method=self.opts.fitting_method,
                 )
-                r2_cor.flat[idx + z * nx * ny] = res_cor.r_squared
+                r2_cor.flat[idx + z * nx * ny] = r2_c
                 t2_cor.flat[idx + z * nx * ny] = np.clip(
-                    abs(res_cor.t2star_ms),
+                    abs(t2s_c),
                     0,
                     self.opts.threshold_t2star_max_ms,
                 )
-                iters.flat[idx + z * nx * ny] = res_cor.iterations
+                iters.flat[idx + z * nx * ny] = max(it_u, it_c)
 
         unc_path = f"{out_dir}/{self.opts.prefix}t2star_uncorrected_{self.opts.fitting_method}.nii.gz"
         cor_path = f"{out_dir}/{self.opts.prefix}t2star_corrected_{self.opts.fitting_method}.nii.gz"

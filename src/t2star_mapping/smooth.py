@@ -78,27 +78,27 @@ def _design_matrix(
 
 
 def design_matrix_dz(
-	xv: np.ndarray,
-	yv: np.ndarray,
-	zv: np.ndarray,
-	t: np.ndarray,
+    xv: np.ndarray,
+    yv: np.ndarray,
+    zv: np.ndarray,
+    t: np.ndarray,
 ) -> np.ndarray:
-	"""Design matrix for derivative along z of the polynomial basis."""
-	nt = t.shape[0]
-	m_dz = np.zeros((xv.size, nt), dtype=float)
-	for i, (px, py, pz) in enumerate(t):
-		if pz == 0:
-			m_dz[:, i] = 0.0
-		else:
-			m_dz[:, i] = pz * (xv**px) * (yv**py) * (zv ** (pz - 1))
-	return m_dz
+    """Design matrix for derivative along z of the polynomial basis."""
+    nt = t.shape[0]
+    m_dz = np.zeros((xv.size, nt), dtype=float)
+    for i, (px, py, pz) in enumerate(t):
+        if pz == 0:
+            m_dz[:, i] = 0.0
+        else:
+            m_dz[:, i] = pz * (xv**px) * (yv**py) * (zv ** (pz - 1))
+    return m_dz
 
 
 def smooth_and_grad_z_polyfit3d(
     freq_3d: np.ndarray,
     mask_3d: np.ndarray,
-	downsample: tuple[int, int, int] = (2, 2, 2),
-	poly_order: int = 3,
+    downsample: tuple[int, int, int] = (2, 2, 2),
+    poly_order: int = 3,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Smooth frequency map and compute grad_z by 3D polynomial fitting.
 
@@ -116,7 +116,6 @@ def smooth_and_grad_z_polyfit3d(
         Downsampling factors (dx, dy, dz). Default is (2, 2, 2).
     poly_order : int, optional
         Maximum polynomial order for 3D fit. Default is 3.
-        Smoothing and polynomial options.
 
     Returns
     -------
@@ -150,7 +149,7 @@ def smooth_and_grad_z_polyfit3d(
     m_full = _design_matrix(x.ravel(), y.ravel(), z.ravel(), terms)
     datafit = (m_full @ coeff).reshape(freq_i.shape)
 
-	# Derivative along z at downsampled grid
+    # Derivative along z at downsampled grid
     m_dz_full = design_matrix_dz(x.ravel(), y.ravel(), z.ravel(), terms)
     datafit_dz = (m_dz_full @ coeff).reshape(freq_i.shape)
 
@@ -162,13 +161,13 @@ def smooth_and_grad_z_polyfit3d(
             for iz, z0 in enumerate(zi):
                 freq_smooth[
                     x0 : min(x0 + dx, nx),
-					y0 : min(y0 + dy, ny),
-					z0 : min(z0 + dz, nz),
+                    y0 : min(y0 + dy, ny),
+                    z0 : min(z0 + dz, nz),
                 ] = datafit[ix, iy, iz]
                 grad_z[
                     x0 : min(x0 + dx, nx),
-					y0 : min(y0 + dy, ny),
-					z0 : min(z0 + dz, nz),
+                    y0 : min(y0 + dy, ny),
+                    z0 : min(z0 + dz, nz),
                 ] = datafit_dz[ix, iy, iz]
 
     return freq_smooth * mask_3d, grad_z * mask_3d
